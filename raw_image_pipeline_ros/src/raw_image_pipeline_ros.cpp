@@ -216,6 +216,18 @@ void RawImagePipelineRos::setupRos() {
 }  // namespace raw_image_pipeline
 
 void RawImagePipelineRos::imageCallback(const sensor_msgs::ImageConstPtr& image_msg) {
+  bool rect_subs = pub_image_rect_.getNumSubscribers() > 0 ||
+                   pub_image_rect_slow_.getNumSubscribers() > 0;
+  bool debayer_subs = pub_image_debayered_.getNumSubscribers() > 0 ||
+                      pub_image_debayered_slow_.getNumSubscribers() > 0;
+  bool colour_subs = pub_image_color_.getNumSubscribers() > 0 ||
+                     pub_image_color_slow_.getNumSubscribers() > 0;
+
+  // early return if there is no subscribers
+  if (!rect_subs && !debayer_subs && !colour_subs){
+    return;
+  }
+
   // Copy Ros msg to opencv
   CHECK_NOTNULL(image_msg);
   cv_bridge::CvImagePtr cv_ptr_processed;
@@ -235,8 +247,8 @@ void RawImagePipelineRos::imageCallback(const sensor_msgs::ImageConstPtr& image_
   // Run image proc cuda pipeline
   raw_image_pipeline_->apply(cv_ptr_processed->image, cv_ptr_processed->encoding);
 
-  // Publish undistorted
-  if (raw_image_pipeline_->isUndistortionEnabled()) {
+  // Publish undistorted only when there is a subscriber
+  if (raw_image_pipeline_->isUndistortionEnabled() && rect_subs) {
     // Publish undistorted
     publishColorImage(cv_ptr_processed,                                                                     // Processed
                       image_msg,                                                                            // Original image
@@ -252,33 +264,38 @@ void RawImagePipelineRos::imageCallback(const sensor_msgs::ImageConstPtr& image_
   }
 
   if (input_type_ == "color") {
-    // Publish debayered image
-    cv_ptr_processed->image = raw_image_pipeline_->getDistDebayeredImage();
-    publishColorImage(cv_ptr_processed,                                                                     // Processed
-                      image_msg,                                                                            // Original image
-                      cv::Mat(),                                                                            // Mask
-                      raw_image_pipeline_->getDistImageHeight(), raw_image_pipeline_->getDistImageWidth(),  // Dimensions
-                      raw_image_pipeline_->getDistDistortionModel(),
-                      raw_image_pipeline_->getDistDistortionCoefficients(),  // Distortion stuff
-                      raw_image_pipeline_->getDistCameraMatrix(), raw_image_pipeline_->getDistRectificationMatrix(),
-                      raw_image_pipeline_->getDistProjectionMatrix(),   // Pinhole stuff
-                      pub_image_debayered_, pub_image_debayered_slow_,  // Publishers
-                      skipped_images_for_slow_topic_                    // Counter to keep track of the skipped images
-    );
 
-    // Publish color image
-    cv_ptr_processed->image = raw_image_pipeline_->getDistColorImage();
-    publishColorImage(cv_ptr_processed,                                                                     // Processed
-                      image_msg,                                                                            // Original image
-                      cv::Mat(),                                                                            // Mask
-                      raw_image_pipeline_->getDistImageHeight(), raw_image_pipeline_->getDistImageWidth(),  // Dimensions
-                      raw_image_pipeline_->getDistDistortionModel(),
-                      raw_image_pipeline_->getDistDistortionCoefficients(),  // Distortion stuff
-                      raw_image_pipeline_->getDistCameraMatrix(), raw_image_pipeline_->getDistRectificationMatrix(),
-                      raw_image_pipeline_->getDistProjectionMatrix(),  // Pinhole stuff
-                      pub_image_color_, pub_image_color_slow_,         // Publishers
-                      skipped_images_for_slow_topic_                   // Counter to keep track of the skipped images
-    );
+    if (debayer_subs) {
+      // Publish debayered image
+      cv_ptr_processed->image = raw_image_pipeline_->getDistDebayeredImage();
+      publishColorImage(cv_ptr_processed,                                                                     // Processed
+                        image_msg,                                                                            // Original image
+                        cv::Mat(),                                                                            // Mask
+                        raw_image_pipeline_->getDistImageHeight(), raw_image_pipeline_->getDistImageWidth(),  // Dimensions
+                        raw_image_pipeline_->getDistDistortionModel(),
+                        raw_image_pipeline_->getDistDistortionCoefficients(),  // Distortion stuff
+                        raw_image_pipeline_->getDistCameraMatrix(), raw_image_pipeline_->getDistRectificationMatrix(),
+                        raw_image_pipeline_->getDistProjectionMatrix(),   // Pinhole stuff
+                        pub_image_debayered_, pub_image_debayered_slow_,  // Publishers
+                        skipped_images_for_slow_topic_                    // Counter to keep track of the skipped images
+      );
+    }
+
+    if (colour_subs) {
+      // Publish color image
+      cv_ptr_processed->image = raw_image_pipeline_->getDistColorImage();
+      publishColorImage(cv_ptr_processed,                                                                     // Processed
+                        image_msg,                                                                            // Original image
+                        cv::Mat(),                                                                            // Mask
+                        raw_image_pipeline_->getDistImageHeight(), raw_image_pipeline_->getDistImageWidth(),  // Dimensions
+                        raw_image_pipeline_->getDistDistortionModel(),
+                        raw_image_pipeline_->getDistDistortionCoefficients(),  // Distortion stuff
+                        raw_image_pipeline_->getDistCameraMatrix(), raw_image_pipeline_->getDistRectificationMatrix(),
+                        raw_image_pipeline_->getDistProjectionMatrix(),  // Pinhole stuff
+                        pub_image_color_, pub_image_color_slow_,         // Publishers
+                        skipped_images_for_slow_topic_                   // Counter to keep track of the skipped images
+      );
+    }
   }
 }
 
