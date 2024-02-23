@@ -8,14 +8,14 @@
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "raw_image_pipeline_ros");
+  rclcpp::init(argc, argv);
   
-  ros::NodeHandle nh;
-  ros::NodeHandle nh_priv("~");
+  rclcpp::Node::SharedPtr nh = rclcpp::Node::make_shared("raw_image_pipeline_ros");
+  rclcpp::Node::SharedPtr nh_priv = nh; // rclcpp::Node::make_shared("...");
 
   raw_image_pipeline::RawImagePipelineRos image_proc(nh, nh_priv);
   image_proc.run();
   
-  ros::waitForShutdown();
+  // rclcpp::waitForShutdown();
   return 0;
 }

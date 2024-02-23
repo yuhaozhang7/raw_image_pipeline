@@ -3,26 +3,24 @@
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 #
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.8)
 project(raw_image_pipeline_ros)
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "-std=c++14 -Wall -Wextra -O3 -DNDEBUG")
+set(CMAKE_CXX_STANDARD 17)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
-set(PACKAGE_DEPENDENCIES
-  raw_image_pipeline
-  cv_bridge
-  glog_catkin
-  eigen_conversions
-  image_transport
-  nodelet
-  roscpp
-)
-
-find_package(catkin REQUIRED
-    COMPONENTS
-    ${PACKAGE_DEPENDENCIES}
-)
+find_package(ament_cmake REQUIRED)
+find_package(cv_bridge REQUIRED)
+# find_package(glog_catkin REQUIRED)
+find_package(image_transport REQUIRED)
+#find_package(nodelet REQUIRED)
+find_package(raw_image_pipeline REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 message("Eigen Version:" ${EIGEN3_VERSION_STRING})
@@ -32,36 +30,30 @@ find_package(OpenCV REQUIRED)
 message("OpenCV version: ${OpenCV_Version}")
 message("OpenCV path: ${OpenCV_DIR}")
 
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS
-    ${PACKAGE_DEPENDENCIES}
-  DEPENDS
-    Eigen3
-    OpenCV
-)
-
 include_directories(
   include
-  ${catkin_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
+  SYSTEM ${EIGEN3_INCLUDE_DIR}
+  SYSTEM ${OpenCV_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} SHARED
     src/raw_image_pipeline_ros.cpp
 )
-target_link_libraries(${PROJECT_NAME}
-    ${catkin_LIBRARIES}
-    ${OpenCV_LIBS}
+ament_target_dependencies(${PROJECT_NAME}
+  cv_bridge
+  image_transport
+  OpenCV
+  raw_image_pipeline
 )
+target_link_libraries(${PROJECT_NAME} yaml-cpp)
 
-add_library(${PROJECT_NAME}_nodelet
-    src/raw_image_pipeline_ros_nodelet.cpp
-)
-target_link_libraries(${PROJECT_NAME}_nodelet
-    ${PROJECT_NAME}
-)
+# ROS2HACK
+# add_library(${PROJECT_NAME}_nodelet
+#     src/raw_image_pipeline_ros_nodelet.cpp
+# )
+# target_link_libraries(${PROJECT_NAME}_nodelet
+#     ${PROJECT_NAME}
+# )
 
 add_executable(${PROJECT_NAME}_node
     src/raw_image_pipeline_ros_node.cpp
@@ -69,3 +61,28 @@ add_executable(${PROJECT_NAME}_node
 target_link_libraries(${PROJECT_NAME}_node
     ${PROJECT_NAME}
 )
+
+
+install(TARGETS ${PROJECT_NAME}
+  DESTINATION lib
+)
+
+install(TARGETS ${PROJECT_NAME}_node # ${PROJECT_NAME}_nodelet 
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+## Mark cpp header files for installation
+install(DIRECTORY include/
+  DESTINATION include
+  FILES_MATCHING PATTERN "*.hpp"
+)
+
+install(DIRECTORY config launch 
+        DESTINATION share/${PROJECT_NAME})
+
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME} ${PROJECT_NAME}_nodelet)
+ament_export_dependencies(Eigen3 OpenCV)
+
+ament_package()
+

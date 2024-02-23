@@ -3,79 +3,69 @@
 # Licensed under the MIT license. See LICENSE file in the project root for details.
 # 
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.8)
 project(raw_image_pipeline_white_balance)
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "-std=c++14 -Wall -Wextra -O3 -DNDEBUG")
 
-set(PACKAGE_DEPENDENCIES
-  roscpp
-  roslib
-  dynamic_reconfigure
-)
+set(CMAKE_CXX_STANDARD 17)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
-find_package(catkin REQUIRED
-    COMPONENTS
-    ${PACKAGE_DEPENDENCIES}
-)
 
+find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(rclcpp REQUIRED)
+# ROS2HACK: find dynamic_reconfigure
 
 # Check if OpenCV was compiled with CUDA
 if(${OpenCV_CUDA_VERSION})
   add_definitions (-DHAS_CUDA)
 endif()
 
-generate_dynamic_reconfigure_options(
-  cfg/RawImagePipelineWhiteBalance.cfg
-)
-
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS
-    ${PACKAGE_DEPENDENCIES}
-  DEPENDS OpenCV
-)
+# ROS2HACK: disable dynamic reconfigure
+# generate_dynamic_reconfigure_options(
+#   cfg/RawImagePipelineWhiteBalance.cfg
+# )
 
 include_directories(
   include
-  ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME} SHARED
     src/raw_image_pipeline_white_balance/convolutional_color_constancy.cpp
 )
-
-target_link_libraries(${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
-)
+ament_target_dependencies(${PROJECT_NAME} OpenCV)
 
 
 # Add executable
 add_executable(${PROJECT_NAME}_node
     src/raw_image_pipeline_white_balance_node.cpp
 )
+ament_target_dependencies(${PROJECT_NAME}_node ament_index_cpp rclcpp)
 target_link_libraries(${PROJECT_NAME}_node
     ${PROJECT_NAME}
 )
 
-add_dependencies(${PROJECT_NAME}_node ${PROJECT_NAME}_gencfg)
+# ROS2HACK
+# add_dependencies(${PROJECT_NAME}_node ${PROJECT_NAME}_gencfg)
 
 # Mark executables and/or libraries for installation
 install(
   TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 # Mark cpp header files for installation
 install(
-  DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  DIRECTORY include/
+  DESTINATION include
   FILES_MATCHING PATTERN "*.hpp"
                  PATTERN "*.h"
 )
@@ -83,5 +73,11 @@ install(
 # Mark other files for installation
 install(
   DIRECTORY model
-  DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  DESTINATION lib
 )
+
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME})
+ament_export_dependencies(Eigen3 OpenCV)
+
+ament_package()
