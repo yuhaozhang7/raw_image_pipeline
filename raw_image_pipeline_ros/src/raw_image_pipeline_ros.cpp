@@ -188,14 +188,13 @@ void RawImagePipelineRos::setupRos() {
   // Set up the raw image subscriber.
   // std::function<void(const sensor_msgs::ImageConstPtr&)> image_callback = std::bind(&RawImagePipelineRos::imageCallback, this, _1);
 
-  // ROS2HACK
-  // image_transport::TransportHints transport_hint(transport_);
+  auto transport_hint = std::make_shared<image_transport::TransportHints>(nh_.get(), transport_);
 
   // Subscribe image
   sub_raw_image_ = image_transport_.subscribe(input_topic_,                               // topic
                                               ros_queue_size,                             // queue size
-                                              std::bind(&RawImagePipelineRos::imageCallback, this, std::placeholders::_1)  // callback
-                                              // transport_hint                              // hints
+                                              &RawImagePipelineRos::imageCallback, this, // callback
+                                              transport_hint.get()                              // hints
   );
 
   // Set up the processed image publisher.
@@ -218,7 +217,7 @@ void RawImagePipelineRos::setupRos() {
   //     nh_private_.advertiseService("reset_white_balance", &RawImagePipelineRos::resetWhiteBalanceHandler, this);
 }  // namespace raw_image_pipeline
 
-void RawImagePipelineRos::imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr image_msg) {
+void RawImagePipelineRos::imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr &image_msg) {
   bool rect_subs = pub_image_rect_.getNumSubscribers() > 0 ||
                    pub_image_rect_slow_.getNumSubscribers() > 0;
   bool debayer_subs = pub_image_debayered_.getNumSubscribers() > 0 ||

@@ -7,7 +7,7 @@
 
 #include <cv_bridge/cv_bridge.h>
 // #include <glog/logging.h>
-#include <image_transport/image_transport.h>
+#include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
 // #include <sensor_msgs/msg/distortion_models.h>
 // #include <std_srvs/Trigger.h>
@@ -35,7 +35,7 @@ class RawImagePipelineRos {
   void setupRos();
 
   // Main callback method
-  void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr image);
+  void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr &image);
 
   // Publishers
   void publishColorImage(const cv_bridge::CvImagePtr& cv_ptr_processed,                                // Processed image
