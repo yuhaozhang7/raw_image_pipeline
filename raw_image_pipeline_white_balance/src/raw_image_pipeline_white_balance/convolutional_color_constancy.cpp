@@ -10,9 +10,9 @@ based on Barron, "Fast Fourier Color Constancy", CVPR, 2017
 */
 
 #include <raw_image_pipeline_white_balance/convolutional_color_constancy.hpp>
+#include <filesystem>
 
-#include <boost/filesystem.hpp>
-#define FILE_FOLDER (boost::filesystem::path(__FILE__).parent_path().string())
+#define FILE_FOLDER (std::filesystem::path(__FILE__).parent_path().string())
 #define DEFAULT_MODEL_PATH (FILE_FOLDER + "/../../model/default.bin")
 
 namespace raw_image_pipeline_white_balance {

@@ -3,20 +3,20 @@
 // Licensed under the MIT license. See LICENSE file in the project root for details.
 //
 
-#include <ros/ros.h>
 #include <raw_image_pipeline_ros/raw_image_pipeline_ros.hpp>
 
 namespace raw_image_pipeline {
 
-RawImagePipelineRos::RawImagePipelineRos(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private)
+RawImagePipelineRos::RawImagePipelineRos(const rclcpp::Node::SharedPtr& nh, const rclcpp::Node::SharedPtr& nh_private)
     : nh_(nh),
       nh_private_(nh_private),
-      spinner_(1),
-      image_transport_(nh),
+      // spinner_(1),
+      image_transport_(nh_),
       skipped_images_for_slow_topic_(0),
       skipped_images_for_slow_topic_rect_(0) {
   // Setup
-  google::InstallFailureSignalHandler();
+  // ROS2HACK
+  // google::InstallFailureSignalHandler();
 
   // Load ROS params and initialize
   loadParams();
@@ -28,8 +28,9 @@ RawImagePipelineRos::RawImagePipelineRos(const ros::NodeHandle& nh, const ros::N
 RawImagePipelineRos::~RawImagePipelineRos() {}
 
 bool RawImagePipelineRos::run() {
-  ROS_INFO_STREAM("[RawImagePipelineRos] Starting...");
-  spinner_.start();
+  RCLCPP_INFO_STREAM(nh_->get_logger(), "[RawImagePipelineRos] Starting...");
+  rclcpp::spin(nh_);
+  // spinner_.start();
   return true;
 }
 
@@ -185,16 +186,17 @@ void RawImagePipelineRos::setupRos() {
   constexpr size_t ros_queue_size = 1u;  // We always process the most updated frame
 
   // Set up the raw image subscriber.
-  boost::function<void(const sensor_msgs::ImageConstPtr&)> image_callback = boost::bind(&RawImagePipelineRos::imageCallback, this, _1);
+  // std::function<void(const sensor_msgs::ImageConstPtr&)> image_callback = std::bind(&RawImagePipelineRos::imageCallback, this, _1);
 
-  image_transport::TransportHints transport_hint(transport_);
+  auto transport_hint = std::make_shared<image_transport::TransportHints>(nh_.get(), transport_);
 
   // Subscribe image
   sub_raw_image_ = image_transport_.subscribe(input_topic_,                               // topic
                                               ros_queue_size,                             // queue size
-                                              &RawImagePipelineRos::imageCallback, this,  // callback
-                                              transport_hint                              // hints
+                                              &RawImagePipelineRos::imageCallback, this, // callback
+                                              transport_hint.get()                              // hints
   );
+
   // Set up the processed image publisher.
   if (raw_image_pipeline_->isUndistortionEnabled()) {
     pub_image_rect_ = image_transport_.advertiseCamera(output_prefix_ + "/" + input_type_ + "_rect/image", ros_queue_size);
@@ -211,11 +213,11 @@ void RawImagePipelineRos::setupRos() {
   }
 
   // Setup service calls
-  reset_wb_temporal_consistency_server_ =
-      nh_private_.advertiseService("reset_white_balance", &RawImagePipelineRos::resetWhiteBalanceHandler, this);
+  // reset_wb_temporal_consistency_server_ =
+  //     nh_private_.advertiseService("reset_white_balance", &RawImagePipelineRos::resetWhiteBalanceHandler, this);
 }  // namespace raw_image_pipeline
 
-void RawImagePipelineRos::imageCallback(const sensor_msgs::ImageConstPtr& image_msg) {
+void RawImagePipelineRos::imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr &image_msg) {
   bool rect_subs = pub_image_rect_.getNumSubscribers() > 0 ||
                    pub_image_rect_slow_.getNumSubscribers() > 0;
   bool debayer_subs = pub_image_debayered_.getNumSubscribers() > 0 ||
@@ -229,7 +231,7 @@ void RawImagePipelineRos::imageCallback(const sensor_msgs::ImageConstPtr& image_
   }
 
   // Copy Ros msg to opencv
-  CHECK_NOTNULL(image_msg);
+  // CHECK_NOTNULL(image_msg);
   cv_bridge::CvImagePtr cv_ptr_processed;
 
   if (transport_ != "raw")
@@ -237,10 +239,10 @@ void RawImagePipelineRos::imageCallback(const sensor_msgs::ImageConstPtr& image_
   else
     cv_ptr_processed = cv_bridge::toCvCopy(image_msg, image_msg->encoding);
 
-  CHECK_NOTNULL(cv_ptr_processed);
+  // CHECK_NOTNULL(cv_ptr_processed);
 
   if (cv_ptr_processed->image.empty()) {
-    ROS_WARN("image empty");
+    RCLCPP_WARN(nh_->get_logger(), "image empty");
     return;
   }
 
@@ -299,15 +301,17 @@ void RawImagePipelineRos::imageCallback(const sensor_msgs::ImageConstPtr& image_
   }
 }
 
+/*
 bool RawImagePipelineRos::resetWhiteBalanceHandler(std_srvs::Trigger::Request& req, std_srvs::Trigger::Response& res) {
   raw_image_pipeline_->resetWhiteBalanceTemporalConsistency();
   res.success = true;
   res.message = "White balance resetted";
   return true;
 }
+*/
 
 void RawImagePipelineRos::publishColorImage(const cv_bridge::CvImagePtr& cv_ptr_processed,                                //
-                                            const sensor_msgs::ImageConstPtr& orig_image,                                 //
+                                            const sensor_msgs::msg::Image::ConstSharedPtr& orig_image,                    //
                                             const cv::Mat& mask,                                                          // Mask
                                             int image_height, int image_width,                                            // Dimensions
                                             const std::string& distortion_model, const cv::Mat& distortion_coefficients,  //
@@ -324,10 +328,10 @@ void RawImagePipelineRos::publishColorImage(const cv_bridge::CvImagePtr& cv_ptr_
   }
 
   // Copy to ROS
-  CHECK_NOTNULL(cv_ptr_processed);
-  CHECK_NOTNULL(orig_image);
-  const sensor_msgs::ImagePtr color_img_msg = cv_ptr_processed->toImageMsg();
-  CHECK_NOTNULL(color_img_msg);
+  // CHECK_NOTNULL(cv_ptr_processed);
+  // CHECK_NOTNULL(orig_image);
+  const sensor_msgs::msg::Image::SharedPtr color_img_msg = cv_ptr_processed->toImageMsg();
+  // CHECK_NOTNULL(color_img_msg);
 
   // Set output encoding
   if (cv_ptr_processed->image.channels() == 3) {
@@ -336,11 +340,11 @@ void RawImagePipelineRos::publishColorImage(const cv_bridge::CvImagePtr& cv_ptr_
     else if (output_encoding_ == "BGR")
       color_img_msg->encoding = sensor_msgs::image_encodings::BGR8;
     else
-      ROS_ERROR_STREAM("Found invalid image encoding: " << output_encoding_
+      RCLCPP_ERROR_STREAM(nh_->get_logger(), "Found invalid image encoding: " << output_encoding_
                                                         << ", make sure to set a supported ouput encoding (either 'RGB' or 'BGR')");
   }
 
-  sensor_msgs::CameraInfoPtr color_camera_info_msg(new sensor_msgs::CameraInfo());
+  sensor_msgs::msg::CameraInfo::SharedPtr color_camera_info_msg(new sensor_msgs::msg::CameraInfo());
 
   // Fix output frame if required
   if (output_frame_ == "passthrough") {
@@ -355,16 +359,16 @@ void RawImagePipelineRos::publishColorImage(const cv_bridge::CvImagePtr& cv_ptr_
 
   // Fix distortion model if it's none
   if (color_camera_info_msg->distortion_model == "none") {
-    color_camera_info_msg->distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+    color_camera_info_msg->distortion_model = "plumb_bob";
   } else {
     color_camera_info_msg->distortion_model = distortion_model;
   }
 
   // Other calibration stuff
-  color_camera_info_msg->D = utils::toStdVector<double>(distortion_coefficients);
-  color_camera_info_msg->K = utils::toBoostArray<double, 9>(camera_matrix);
-  color_camera_info_msg->R = utils::toBoostArray<double, 9>(rectification_matrix);
-  color_camera_info_msg->P = utils::toBoostArray<double, 12>(projection_matrix);
+  color_camera_info_msg->d = utils::toStdVector<double>(distortion_coefficients);
+  color_camera_info_msg->k = utils::toStdArray<double, 9>(camera_matrix);
+  color_camera_info_msg->r = utils::toStdArray<double, 9>(rectification_matrix);
+  color_camera_info_msg->p = utils::toStdArray<double, 12>(projection_matrix);
 
   // Assign the original timestamp and publish
   color_img_msg->header.stamp = orig_image->header.stamp;
@@ -395,13 +399,15 @@ std::string RawImagePipelineRos::getTransportHintFromTopic(std::string& image_to
 }
 
 std::vector<double> RawImagePipelineRos::readParameter(const std::string& param, std::vector<double> default_value) {
+  nh_private_->declare_parameter(param, default_value);
+
   std::stringstream ss;  // Prepare default string
   for (auto v : default_value) {
     ss << v << " ";
   }
   std::vector<double> value;
-  if (!nh_private_.param<std::vector<double>>(param, value, default_value)) {
-    ROS_WARN_STREAM("could not get [" << param << "], using default " << ss.str());
+  if (!nh_private_->get_parameter(param, value)) {
+    RCLCPP_WARN_STREAM(nh_->get_logger(), "could not get [" << param << "], using default " << ss.str());
   }
   return value;
 }

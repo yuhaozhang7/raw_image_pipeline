@@ -33,12 +33,12 @@
   <arg name="flip/angle"                           default="0"/>  <!-- 90 (clockwise), 180, 270 (counter-clockwise) -->
   <!-- White balance options -->
   <arg name="white_balance/method"                 default="ccc"/> <!-- simple, grey_world, learned, ccc, pca -->
-  <arg name="white_balance/clipping_percentile"    default="10"/>  <!-- simple WB, values [0-100]-->
+  <arg name="white_balance/clipping_percentile"    default="10."/>  <!-- simple WB, values [0-100]-->
   <arg name="white_balance/saturation_bright_thr"  default="0.8"/> <!-- grey_world, learned, ccc: [0.0, 1.0] -->
   <arg name="white_balance/saturation_dark_thr"    default="0.2"/> <!-- ccc-only: [0.0, 1.0] -->
   <arg name="white_balance/temporal_consistency"   default="false"/>  <!-- ccc-only: uses a Kalman filter to track the illuminant estimate -->
   <!-- Color calibration -->
-  <arg name="color_calibration/calibration_file"  default="$(find raw_image_pipeline)/config/alphasense_color_calib_example.yaml"/>
+  <arg name="color_calibration/calibration_file"  default="$(find-pkg-share raw_image_pipeline)/config/alphasense_color_calib_example.yaml"/>
   <!-- Gamma correction options -->
   <arg name="gamma_correction/method"              default="custom"/> <!-- default, custom-->
   <arg name="gamma_correction/k"                   default="0.9"/> <!-- k >= 1 -> forward gamma (darker); k < 1 -> inverse gamma (brighter)-->
@@ -51,10 +51,12 @@
   <!-- Undistortion -->
   <arg name="undistortion/balance"                 default="0.5"/> <!-- Balance [0,1] -->
   <arg name="undistortion/fov_scale"               default="1.2"/> <!-- scale > 1.0 increases the FoV -->
-  <arg name="undistortion/calibration_file"       default="$(find raw_image_pipeline)/config/alphasense_calib_example.yaml"/>
+  <arg name="undistortion/calibration_file"       default="$(find-pkg-share raw_image_pipeline)/config/alphasense_calib_example.yaml"/>
   
   <!-- Disable Image Transport plugins -->
-  <group if="$(arg disable_compression_plugins)" ns="$(arg output_prefix)">
+  <!-- ROS2Hack-->
+  <!--   
+  <group if="$(var disable_compression_plugins)" ns="$(var output_prefix)">
     <rosparam param="debayered/image/disable_pub_plugins">
       - 'image_transport/compressedDepth'
       - 'image_transport/theora'
@@ -63,68 +65,69 @@
       - 'image_transport/compressedDepth'
       - 'image_transport/theora'
     </rosparam>
-    <rosparam param="$(arg input_type)/image/disable_pub_plugins">
+    <rosparam param="$(var input_type)/image/disable_pub_plugins">
       - 'image_transport/compressedDepth'
       - 'image_transport/theora'
     </rosparam>
-    <rosparam param="$(arg input_type)/slow/disable_pub_plugins">
+    <rosparam param="$(var input_type)/slow/disable_pub_plugins">
       - 'image_transport/compressedDepth'
       - 'image_transport/theora'
     </rosparam>
-    <rosparam param="$(arg input_type)_rect/image/disable_pub_plugins">
+    <rosparam param="$(var input_type)_rect/image/disable_pub_plugins">
       - 'image_transport/compressedDepth'
       - 'image_transport/theora'
     </rosparam>
-    <rosparam param="$(arg input_type)_rect/slow/disable_pub_plugins">
+    <rosparam param="$(var input_type)_rect/slow/disable_pub_plugins">
       - 'image_transport/compressedDepth'
       - 'image_transport/theora'
     </rosparam>
   </group>
+  -->
 
   <!-- Nodes -->
-  <node name="raw_image_pipeline_ros_node_$(arg camera_name)" type="raw_image_pipeline_ros_node" pkg="raw_image_pipeline_ros" output="screen" launch-prefix="$(arg launch_prefix)">
-    <param name="input_topic"                          value="$(arg input_topic)"/>
-    <param name="input_type"                           value="$(arg input_type)"/>
+  <node name="raw_image_pipeline_ros_node_$(var camera_name)" exec="raw_image_pipeline_ros_node" pkg="raw_image_pipeline_ros" output="screen" launch-prefix="$(var launch_prefix)">
+    <param name="input_topic"                          value="$(var input_topic)"/>
+    <param name="input_type"                           value="$(var input_type)"/>
 
-    <param name="output_prefix"                       value="$(arg output_prefix)"/>
-    <param name="output_encoding"                      value="$(arg output_encoding)"/>
-    <param name="output_frame"                         value="$(arg output_frame)"/>
-    <param name="skip_number_of_images_for_slow_topic" value="$(arg skip_number_of_images_for_slow_topic)"/>
-    <param name="use_gpu"                              value="$(arg use_gpu)"/>
-    <param name="debug"                                value="$(arg debug)"/>
+    <param name="output_prefix"                       value="$(var output_prefix)"/>
+    <param name="output_encoding"                      value="$(var output_encoding)"/>
+    <param name="output_frame"                         value="$(var output_frame)"/>
+    <param name="skip_number_of_images_for_slow_topic" value="$(var skip_number_of_images_for_slow_topic)"/>
+    <param name="use_gpu"                              value="$(var use_gpu)"/>
+    <param name="debug"                                value="$(var debug)"/>
     
-    <param name="debayer/enabled"                      value="$(arg debayer/enabled)"/>
-    <param name="debayer/encoding"                     value="$(arg debayer_encoding)"/>
+    <param name="debayer/enabled"                      value="$(var debayer/enabled)"/>
+    <param name="debayer/encoding"                     value="$(var debayer_encoding)"/>
 
-    <param name="flip/enabled"                         value="$(arg flip/enabled)"/>
-    <param name="flip/angle"                           value="$(arg flip/angle)"/>
+    <param name="flip/enabled"                         value="$(var flip/enabled)"/>
+    <param name="flip/angle"                           value="$(var flip/angle)"/>
     
-    <param name="white_balance/enabled"                value="$(arg white_balance/enabled)"/>
-    <param name="white_balance/method"                 value="$(arg white_balance/method)"/>
-    <param name="white_balance/clipping_percentile"    value="$(arg white_balance/clipping_percentile)"/>
-    <param name="white_balance/saturation_bright_thr"  value="$(arg white_balance/saturation_bright_thr)"/>
-    <param name="white_balance/saturation_dark_thr"    value="$(arg white_balance/saturation_dark_thr)"/>
-    <param name="white_balance/temporal_consistency"   value="$(arg white_balance/temporal_consistency)"/>
+    <param name="white_balance/enabled"                value="$(var white_balance/enabled)"/>
+    <param name="white_balance/method"                 value="$(var white_balance/method)"/>
+    <param name="white_balance/clipping_percentile"    value="$(var white_balance/clipping_percentile)"/>
+    <param name="white_balance/saturation_bright_thr"  value="$(var white_balance/saturation_bright_thr)"/>
+    <param name="white_balance/saturation_dark_thr"    value="$(var white_balance/saturation_dark_thr)"/>
+    <param name="white_balance/temporal_consistency"   value="$(var white_balance/temporal_consistency)"/>
     
-    <param name="color_calibration/enabled"            value="$(arg color_calibration/enabled)"/>
-    <param name="color_calibration/calibration_file"   value="$(arg color_calibration/calibration_file)"/>
+    <param name="color_calibration/enabled"            value="$(var color_calibration/enabled)"/>
+    <param name="color_calibration/calibration_file"   value="$(var color_calibration/calibration_file)"/>
 
-    <param name="gamma_correction/enabled"             value="$(arg gamma_correction/enabled)"/>
-    <param name="gamma_correction/method"              value="$(arg gamma_correction/method)"/>
-    <param name="gamma_correction/k"                   value="$(arg gamma_correction/k)"/>
+    <param name="gamma_correction/enabled"             value="$(var gamma_correction/enabled)"/>
+    <param name="gamma_correction/method"              value="$(var gamma_correction/method)"/>
+    <param name="gamma_correction/k"                   value="$(var gamma_correction/k)"/>
 
-    <param name="vignetting_correction/enabled"        value="$(arg vignetting_correction/enabled)"/>
-    <param name="vignetting_correction/scale"          value="$(arg vignetting_correction/scale)"/>
-    <param name="vignetting_correction/a2"             value="$(arg vignetting_correction/a2)"/>
-    <param name="vignetting_correction/a4"             value="$(arg vignetting_correction/a4)"/>
+    <param name="vignetting_correction/enabled"        value="$(var vignetting_correction/enabled)"/>
+    <param name="vignetting_correction/scale"          value="$(var vignetting_correction/scale)"/>
+    <param name="vignetting_correction/a2"             value="$(var vignetting_correction/a2)"/>
+    <param name="vignetting_correction/a4"             value="$(var vignetting_correction/a4)"/>
     
-    <param name="color_enhancer/enabled"               value="$(arg color_enhancer/enabled)"/>
-    <param name="color_enhancer/saturation_gain"       value="$(arg color_enhancer/saturation_gain)"/>
+    <param name="color_enhancer/enabled"               value="$(var color_enhancer/enabled)"/>
+    <param name="color_enhancer/saturation_gain"       value="$(var color_enhancer/saturation_gain)"/>
     
-    <param name="undistortion/enabled"                 value="$(arg undistortion/enabled)"/>
-    <param name="undistortion/balance"                 value="$(arg undistortion/balance)"/>
-    <param name="undistortion/fov_scale"               value="$(arg undistortion/fov_scale)"/>
-    <param name="undistortion/calibration_file"        value="$(arg undistortion/calibration_file)"/>
+    <param name="undistortion/enabled"                 value="$(var undistortion/enabled)"/>
+    <param name="undistortion/balance"                 value="$(var undistortion/balance)"/>
+    <param name="undistortion/fov_scale"               value="$(var undistortion/fov_scale)"/>
+    <param name="undistortion/calibration_file"        value="$(var undistortion/calibration_file)"/>
   </node>
 
 </launch>

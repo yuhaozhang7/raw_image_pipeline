@@ -4,6 +4,7 @@
 //
 
 #include <raw_image_pipeline/modules/undistortion.hpp>
+#include <filesystem>
 
 namespace raw_image_pipeline {
 
@@ -152,7 +153,7 @@ void UndistortionModule::loadCalibration(const std::string& file_path) {
   std::cout << "Loading camera calibration from file " << file_path << std::endl;
 
   // Check if file exists
-  if (boost::filesystem::exists(file_path)) {
+  if (std::filesystem::exists(file_path)) {
     // Load calibration
     YAML::Node node = YAML::LoadFile(file_path);
     // Camera matrix

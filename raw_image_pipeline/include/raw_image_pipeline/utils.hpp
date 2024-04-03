@@ -93,5 +93,16 @@ static boost::array<T, N> toBoostArray(const cv::Mat& m) {
   return vec;
 }
 
+template <typename T, std::size_t N>
+static std::array<T, N> toStdArray(const cv::Mat& m) {
+  // TODO: this could be optimized
+  std::array<T, N> vec;
+  cv::Mat m_aux = m.isContinuous() ? m : m.clone();
+  m_aux = m_aux.reshape(1, m_aux.total() * m_aux.channels());
+
+  for (size_t i = 0; i < N; i++) vec[i] = m_aux.at<T>(i);
+  return vec;
+}
+
 }  // namespace utils
 }  // namespace raw_image_pipeline

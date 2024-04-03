@@ -9,21 +9,20 @@ simple test node to control UV using rqt_reconfigure
 */
 
 // ROS
-#include <ros/package.h>  // to get the current directory of the package.
-#include <ros/ros.h>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <opencv2/opencv.hpp>
 #include <raw_image_pipeline_white_balance/convolutional_color_constancy.hpp>
 
-#include <ros/ros.h>
-
-#include <dynamic_reconfigure/server.h>
-#include <raw_image_pipeline_white_balance/RawImagePipelineWhiteBalanceConfig.h>
+// ROS2HACK
+// #include <dynamic_reconfigure/server.h>
+// #include <raw_image_pipeline_white_balance/RawImagePipelineWhiteBalanceConfig.h>
 
 class WhiteBalanceRos {
  public:
-  dynamic_reconfigure::Server<raw_image_pipeline_white_balance::RawImagePipelineWhiteBalanceConfig> server_;
-  dynamic_reconfigure::Server<raw_image_pipeline_white_balance::RawImagePipelineWhiteBalanceConfig>::CallbackType f_;
+  // dynamic_reconfigure::Server<raw_image_pipeline_white_balance::RawImagePipelineWhiteBalanceConfig> server_;
+  // dynamic_reconfigure::Server<raw_image_pipeline_white_balance::RawImagePipelineWhiteBalanceConfig>::CallbackType f_;
   std::string model_file_;
   std::string image_file_;
   cv::Mat image_;
@@ -66,10 +65,12 @@ class WhiteBalanceRos {
 
     cv::waitKey(10);
 
-    f_ = boost::bind(&WhiteBalanceRos::callback, this, _1, _2);
-    server_.setCallback(f_);
+    // f_ = boost::bind(&WhiteBalanceRos::callback, this, _1, _2);
+    // server_.setCallback(f_);
   }
 
+// ROS2HACK
+/*
   void callback(raw_image_pipeline_white_balance::RawImagePipelineWhiteBalanceConfig& config, uint32_t) {
     wb_->setSaturationThreshold(config.bright_thr, config.dark_thr);
     // wb_->setDebugUVOffset(config.Lu_offset, config.Lv_offset, config.uv0);
@@ -99,20 +100,22 @@ class WhiteBalanceRos {
 
     cv::waitKey(10);
   }
+*/
 };
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "raw_image_pipeline_white_balance");
-  ros::NodeHandle nh_priv("~");
-  std::string model_file = ros::package::getPath("raw_image_pipeline_white_balance") + "/model/default.bin";
-  std::string image_file = ros::package::getPath("raw_image_pipeline_white_balance") + "/data/alphasense2.png";
+  rclcpp::init(argc, argv);
+  rclcpp::Node::SharedPtr nh = rclcpp::Node::make_shared("raw_image_pipeline_white_balance");
+  std::string model_file = ament_index_cpp::get_package_share_directory("raw_image_pipeline_white_balance") + "/model/default.bin";
+  std::string image_file = ament_index_cpp::get_package_share_directory("raw_image_pipeline_white_balance") + "/data/alphasense2.png";
 
   // Get input image path
-  nh_priv.param<std::string>("image", image_file, image_file);
+  nh->declare_parameter("image", image_file); // give default value
+  nh->get_parameter("image", image_file);
 
   WhiteBalanceRos wb(model_file, image_file);
 
-  ROS_INFO("Spinning node");
-  ros::spin();
+  RCLCPP_INFO(nh->get_logger(), "Spinning node");
+  rclcpp::spin(nh);
   return 0;
 }

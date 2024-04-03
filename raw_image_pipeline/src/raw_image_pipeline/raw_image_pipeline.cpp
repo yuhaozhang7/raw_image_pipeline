@@ -5,8 +5,8 @@
 
 #include <raw_image_pipeline/raw_image_pipeline.hpp>
 
-#include <boost/filesystem.hpp>
-#define FILE_FOLDER (boost::filesystem::path(__FILE__).parent_path().string())
+#include <filesystem>
+#define FILE_FOLDER (std::filesystem::path(__FILE__).parent_path().string())
 #define DEFAULT_PARAMS_PATH (FILE_FOLDER + "/../../config/pipeline_params_example.yaml")
 #define DEFAULT_CALIBRATION_PATH (FILE_FOLDER + "/../../config/alphasense_calib_example.yaml")
 #define DEFAULT_COLOR_CALIBRATION_PATH (FILE_FOLDER + "/../../config/alphasense_color_calib_example.yaml")
@@ -45,7 +45,7 @@ void RawImagePipeline::loadParams(const std::string& file_path) {
   std::cout << "Loading raw_image_pipeline params from file " << file_path << std::endl;
 
   // Check if file exists
-  if (boost::filesystem::exists(file_path)) {
+  if (std::filesystem::exists(file_path)) {
     // Load parameters
     YAML::Node node = YAML::LoadFile(file_path);
 
