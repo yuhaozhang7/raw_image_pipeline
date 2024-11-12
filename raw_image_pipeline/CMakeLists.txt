@@ -107,6 +107,15 @@ install(DIRECTORY include/
   FILES_MATCHING PATTERN "*.hpp"
 )
 
+install(
+  DIRECTORY config 
+  DESTINATION share/${PROJECT_NAME}
+  FILES_MATCHING PATTERN "*.yaml"
+                 PATTERN "*.xml"
+                 PATTERN "*.launch"
+)
+
+
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
 ament_export_dependencies(Eigen3 OpenCV raw_image_pipeline_white_balance yaml-cpp)
