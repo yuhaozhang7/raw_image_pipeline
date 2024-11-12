@@ -150,7 +150,7 @@ cv::Mat UndistortionModule::getRectMask() const {
 // Helper methods
 //-----------------------------------------------------------------------------
 void UndistortionModule::loadCalibration(const std::string& file_path) {
-  std::cout << "Loading camera calibration from file " << file_path << std::endl;
+  std::cerr << "Loading camera calibration from file " << file_path << std::endl;
 
   // Check if file exists
   if (std::filesystem::exists(file_path)) {

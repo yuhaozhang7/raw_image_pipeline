@@ -153,6 +153,18 @@ void RawImagePipelineRos::loadParams() {
   std::string calibration_file = readParameter("undistortion/calibration_file", std::string(""));
   raw_image_pipeline_->loadCameraCalibration(calibration_file);
 
+  cv::Mat rect_projection_matrix = raw_image_pipeline_->getRectProjectionMatrix();
+  cv::Mat rect_distortion_coeff = raw_image_pipeline_->getRectDistortionCoefficients();
+  std::cerr << "K: [";
+  for (size_t i = 0; i < 3; i++) {
+    for (size_t j = 0; j < 3; j++) {
+      if ((i == 0)&&(j==0)){ }else{ std::cerr << ", ";}
+      std::cerr << std::fixed << std::setprecision(10) << rect_projection_matrix.at<double>(i, j);
+    }
+  }
+  std::cerr << "]\n";
+  std::cerr << "D: [0.0, 0.0, 0.0, 0.0]\n";
+
   if (calibration_file.empty()) {
     int image_width = readParameter("undistortion/image_width", 640);
     int image_height = readParameter("undistortion/image_width", 480);
