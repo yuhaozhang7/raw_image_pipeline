@@ -246,10 +246,18 @@ void RawImagePipelineRos::imageCallback(const sensor_msgs::msg::Image::ConstShar
   // CHECK_NOTNULL(image_msg);
   cv_bridge::CvImagePtr cv_ptr_processed;
 
-  if (transport_ != "raw")
+  if (transport_ != "raw") {
+    // Compressed images (they should be BGR)
     cv_ptr_processed = cv_bridge::toCvCopy(image_msg, "bgr8");
-  else
+  }
+  else if (transport_ == "raw" && image_msg->encoding == "rgb8") {
+    // Special case when the image is raw and RGB
+    cv_ptr_processed = cv_bridge::toCvCopy(image_msg, "bgr8");
+  }
+  else {
+    // This should capture bayer pattern cases
     cv_ptr_processed = cv_bridge::toCvCopy(image_msg, image_msg->encoding);
+  }
 
   // CHECK_NOTNULL(cv_ptr_processed);
 
